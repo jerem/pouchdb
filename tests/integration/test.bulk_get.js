@@ -32,6 +32,23 @@ adapters.forEach(function (adapter) {
       });
     });
 
+    it('test bulk get with no rev specified', function (done) {
+      var db = new PouchDB(dbs.name);
+      db.put({_id: 'foo', val: 1}).then(function (response) {
+        var rev = response.rev;
+        db.bulkGet({
+          docs: [
+            {id: 'foo'}
+          ]
+        }).then(function (response) {
+          var result = response.results[0];
+          result.id.should.equal("foo");
+          result.docs[0].ok._rev.should.equal(rev);
+          done();
+        });
+      });
+    });
+
     it('_revisions is not returned by default', function (done) {
       var db = new PouchDB(dbs.name);
       db.put({_id: 'foo', val: 1}).then(function (response) {
@@ -55,6 +72,23 @@ adapters.forEach(function (adapter) {
         db.bulkGet({
           docs: [
             {id: 'foo', rev: rev}
+          ],
+          revs: true
+        }).then(function (response) {
+          var result = response.results[0];
+          result.docs[0].ok._revisions.ids[0].should.equal(rev.substring(2));
+          done();
+        });
+      });
+    });
+
+    it('_revisions is returned when specified, using implicit rev', function (done) {
+      var db = new PouchDB(dbs.name);
+      db.put({_id: 'foo', val: 1}).then(function (response) {
+        var rev = response.rev;
+        db.bulkGet({
+          docs: [
+            {id: 'foo'}
           ],
           revs: true
         }).then(function (response) {
@@ -108,6 +142,33 @@ adapters.forEach(function (adapter) {
         db.bulkGet({
           docs: [
             {id: 'foo', rev: rev}
+          ],
+          attachments: true
+        }).then(function (response) {
+          var result = response.results[0];
+          result.docs[0].ok._attachments['foo.txt'].data.should.equal("VGhpcyBpcyBhIGJhc2U2NCBlbmNvZGVkIHRleHQ=");
+          done();
+        });
+      });
+    });
+
+    it('attachments are included when specified, using implicit rev', function (done) {
+      var db = new PouchDB(dbs.name);
+
+      db.put({
+        _id: 'foo',
+        _attachments: {
+          'foo.txt': {
+            content_type: 'text/plain',
+            data: 'VGhpcyBpcyBhIGJhc2U2NCBlbmNvZGVkIHRleHQ='
+          }
+        }
+      }).then(function (response) {
+        var rev = response.rev;
+
+        db.bulkGet({
+          docs: [
+            {id: 'foo'}
           ],
           attachments: true
         }).then(function (response) {
